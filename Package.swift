@@ -4,20 +4,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "${NAME}",
-    platforms: [
-        .iOS(.v13),
-    ],
-    products: [
-        .library(name: "${NAME}", targets: ["${NAME}"]),
-    ],
-    dependencies: [
-    ],
-    targets: [
-        .target(
-            name: "${NAME}",
-            dependencies: [
-            ]
-        )
-    ]
+	name: "swift-json",
+	platforms: [
+		.macOS(.v10_13),
+		.iOS(.v11),
+		.tvOS(.v11),
+		.watchOS(.v4),
+	],
+	products: [
+		.library(name: "SwiftJSON", targets: ["SwiftJSON"]),
+	],
+	dependencies: [
+	],
+	targets: [
+		.target(
+			name: "SwiftJSON",
+			dependencies: []
+		),
+	]
 )
