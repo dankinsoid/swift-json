@@ -24,3 +24,10 @@ public enum JSONDecodingError: String, LocalizedError {
 
 	public var errorDescription: String? { rawValue }
 }
+
+public struct WrongType: Error {}
+
+public struct NoValue: Error {
+
+	public var path: [JSONKeyType]
+}

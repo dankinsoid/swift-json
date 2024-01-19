@@ -21,5 +21,6 @@ let package = Package(
 			name: "SwiftJSON",
 			dependencies: []
 		),
+		.testTarget(name: "SwiftJSONTests", dependencies: ["SwiftJSON"]),
 	]
 )
