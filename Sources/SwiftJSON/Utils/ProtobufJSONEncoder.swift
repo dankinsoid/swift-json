@@ -180,8 +180,7 @@ struct ProtobufJSONEncoder {
 			if let v = Int64(exactly: Double(value)) {
 				appendInt(value: v)
 			} else {
-				let formatted = doubleFormatter.floatToUtf8(value, fraction: maxFractionDigits)
-				data.append(contentsOf: formatted)
+				data.append(contentsOf: value.debugDescription.utf8)
 			}
 		}
 	}
@@ -189,10 +188,10 @@ struct ProtobufJSONEncoder {
 	/// Append a double value to the output.
 	/// This handles Nan and infinite values by
 	/// writing well-known string values.
-	mutating func putDoubleValue(value: Double, max: Int32? = nil) {
+	mutating func putDoubleValue(value: Double) {
 		if value.isNaN {
 			append(staticText: "\"NaN\"")
-		} else if !value.isFinite {
+		} else if value.isInfinite {
 			if value < 0 {
 				append(staticText: "\"-Infinity\"")
 			} else {
@@ -202,22 +201,20 @@ struct ProtobufJSONEncoder {
 			if let v = Int64(exactly: value) {
 				appendInt(value: v)
 			} else {
-				let formatted = doubleFormatter.doubleToUtf8(value, fraction: max ?? maxFractionDigits)
-				data.append(contentsOf: formatted)
+				data.append(contentsOf: value.debugDescription.utf8)
 			}
 		}
 	}
 
-	/// Append a double value to the output.
-	/// This handles Nan and infinite values by
+	/// Append a decimal value to the output.
+	/// This handles Nan values by
 	/// writing well-known string values.
 	mutating func putDecimalValue(value: Decimal) {
-		let (int, fraction) = string(decimal: value)
-		let max = maxFractionDigits == nil ? value.fractionLength : min(value.fractionLength, Int(maxFractionDigits!))
-		append(text: int)
-		guard !fraction.isEmpty, max > 0 else { return }
-		append(text: ".")
-		append(text: String(fraction.prefix(max)))
+		guard !value.isNaN else {
+			append(staticText: "\"NaN\"")
+			return
+		}
+		data.append(contentsOf: value.description.utf8)
 	}
 
 	private func string(decimal: Decimal) -> (integer: String, fraction: String) {

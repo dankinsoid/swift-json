@@ -20,7 +20,7 @@ public enum JSON: Codable {
 	case null
 
 	/// Allows accessing JSON object properties using subscript syntax with dynamic member lookup.
-	public subscript(dynamicMember member: String) -> JSON {
+	public subscript(dynamicMember member: String) -> JSON? {
 		get { self[member] }
 		set { self[member] = newValue }
 	}
@@ -44,22 +44,32 @@ public enum JSON: Codable {
 	}
 
 	/// Initializer that attempts to create a JSON value from various Swift types.
-	public init?(_ value: Any) {
-		if let bl = value as? Bool { self = .bool(bl); return }
+	public init?(_ value: Any?) {
+		guard let value else {
+			self = .null
+			return
+		}
+		if let json = value as? JSON {
+			self = json
+			return
+		}
 		if let int = value as? Int { self = .number(Decimal(int)); return }
-		if let db = value as? Decimal { self = .number(db); return }
 		if let db = value as? Double { self = .number(Decimal(db)); return }
+		if let db = value as? Decimal { self = .number(db); return }
 		if let str = value as? String { self = .string(str); return }
-		if let arr = value as? [Any] {
+		if let bl = value as? Bool { self = .bool(bl); return }
+		if let arr = value as? [Any?] {
 			var arrV: [JSON] = []
 			for a in arr {
-				guard let json = JSON(a) else { return nil }
+				guard let json = JSON(a) else {
+					return nil
+				}
 				arrV.append(json)
 			}
 			self = .array(arrV)
 			return
 		}
-		if let dict = value as? [String: Any] {
+		if let dict = value as? [String: Any?] {
 			var dictV: [String: JSON] = [:]
 			for (key, v) in dict {
 				guard let json = JSON(v) else { return nil }
@@ -68,7 +78,7 @@ public enum JSON: Codable {
 			self = .object(dictV)
 			return
 		}
-		if value as Any? == nil || value is Void {
+		if value as Any? == nil || value is Void || value is NSNull {
 			self = .null
 			return
 		}
@@ -126,7 +136,7 @@ public enum JSON: Codable {
 				throw JSONDecodingError.failure
 			}
 		default:
-			let dbl = try scanner.nextDecimal()
+			let dbl = try scanner.nextNumber()
 			self = .number(dbl)
 		}
 	}
@@ -217,7 +227,7 @@ public extension JSON {
 		get {
 			switch self {
 			case let .string(str): return Int(str)
-			case let .number(d): return Int((d as NSDecimalNumber).intValue)
+			case let .number(d): return Int(Double(d))
 			default: return nil
 			}
 		}
@@ -244,7 +254,7 @@ public extension JSON {
 	var double: Double? {
 		get {
 			switch self {
-			case let .number(d): return (d as NSDecimalNumber).doubleValue
+			case let .number(d): return Double(d)
 			case let .string(str): return Double(str)
 			default: return nil
 			}
@@ -302,18 +312,16 @@ public extension JSON {
 		self.kind == kind
 	}
 
-	// /// Subscript to access or modify elements by path in a JSON object.
-	// subscript<S: Collection>(path: S, default defaultValue: JSON = .null) -> JSON where S.Element == JSONKeyType {
-	// 	get {
-	// 		(try? self[path]) ?? defaultValue
-	// 	}
-	// 	set {
-			
-	// 	}
-	// }
+	/// Subscript to access or modify elements by path in a JSON object.
+	subscript<S: Collection>(path: S, or defaultValue: JSON) -> JSON where S.Element == JSONKeyType {
+		get {
+			self[path] ?? defaultValue
+		}
+		set {}
+	}
 
 	/// Subscript to access or modify elements by path in a JSON object.
-	subscript<S: Collection>(path: S, default defaultValue: JSON = .null) -> JSON where S.Element == JSONKeyType {
+	subscript<S: Collection>(path: S) -> JSON? where S.Element == JSONKeyType {
 		get {
 			guard !path.isEmpty else { return self }
 			switch (self, path[path.startIndex]._jsonKey) {
@@ -321,51 +329,68 @@ public extension JSON {
 				if let value = dict[string] {
 					return value[path.dropFirst()]
 				} else {
-					return defaultValue
+					return nil
 				}
 			case let (.array(array), .int(int)):
 				if int < array.count, int >= 0 {
 					return array[int][path.dropFirst()]
 				} else {
-					return defaultValue
+					return nil
 				}
 			default:
-				return defaultValue
+				return nil
 			}
 		}
 		set {
 			guard !path.isEmpty else {
-				self = newValue
+				if let newValue {
+					self = newValue
+				}
 				return
 			}
 			switch path[path.startIndex]._jsonKey {
 			case let .string(string):
-				guard var object, var value = object[string] else { return }
-				value[path.dropFirst()] = newValue
-				object[string] = value
+				guard var object else { return }
+				if let newValue {
+					var value = object[string]
+					value[or: [:]][path.dropFirst()] = newValue
+					object[string] = value
+				} else {
+					object[string] = nil
+				}
 				self = .object(object)
 			case let .int(int):
 				guard var array, int < array.count, int >= 0 else { return }
-				array[int][path.dropFirst()] = newValue
+				if let newValue {
+					array[int][path.dropFirst()] = newValue
+				} else {
+					array.remove(at: int)
+				}
 				self = .array(array)
 			}
 		}
 	}
 
 	/// Subscript to access or modify elements by path in a JSON object.
-	subscript(path: JSONKeyType..., default defaultValue: JSON = .null) -> JSON {
-		get { self[path, default: defaultValue] }
-		set { self[path, default: defaultValue] = newValue }
+	subscript(path: JSONKeyType...) -> JSON? {
+		get { self[path] }
+		set { self[path] = newValue }
+	}
+
+	/// Subscript to access or modify elements by path in a JSON object.
+	subscript(path: JSONKeyType..., or defaultValue: JSON) -> JSON {
+		get { self[path, or: defaultValue] }
+		set { self[path, or: defaultValue] = newValue }
 	}
 
 	/// Subscript to access or modify elements by a CodingKey in a JSON object or array.
-	subscript(codingKey: CodingKey) -> JSON {
+	subscript(codingKey: CodingKey) -> JSON? {
 		get { self[codingKey._jsonKey.value] }
 		set { self[codingKey._jsonKey.value] = newValue }
 	}
 
 	/// Subscript to access or modify elements by a CodingKey in a JSON object or array.
-	subscript(codingPath: [CodingKey]) -> JSON {
+	subscript(codingPath: [CodingKey]) -> JSON? {
 		get {
 			self[codingPath.map { $0._jsonKey.value }]
 		}
@@ -397,7 +422,7 @@ public extension JSON? {
 
 	/// Returns the JSON value if it is not nil, or .null otherwise.
 	var orNull: JSON {
-		get { self ?? .null }
+		get { self[or: .null] }
 		set { self = newValue.is(.null) ? .none : .null }
 	}
 
@@ -427,33 +452,21 @@ public extension JSON {
 extension JSON: CustomStringConvertible {
 
 	public var description: String {
-		var str = self.stringSlice()
-		JSON.makeOffsets(&str)
-		return str
+		stringSlice()
 	}
 
-	private func stringSlice() -> String {
+	private func stringSlice(_ intentSize: Int = 0) -> String {
+		let indent = [String](repeating: Self.singleIndent, count: intentSize).joined()
+		let nextIndent = indent + Self.singleIndent
 		switch self {
-		case let .bool(b): return "\(b)"
-		case let .number(d): return d.description
-		case let .string(str): return "\"\(str)\""
-		case let .array(a): return "[\(a.map { $0.stringSlice() }.joined(separator: ", "))]"
-		case let .object(d): return "{\n\(d.map { "\"\($0.key)\": \($0.value.stringSlice())" }.joined(separator: ",\n"))\n}"
+		case .number, .string, .bool: return utf8String
+		case let .array(a): return "[\n\(a.map { nextIndent + $0.stringSlice(intentSize + 1) }.joined(separator: ",\n"))\n\(indent)]"
+		case let .object(d): return "{\n\(d.map { "\(nextIndent)\"\($0.key)\": \($0.value.stringSlice(intentSize + 1))" }.sorted().joined(separator: ",\n"))\n\(indent)}"
 		case .null: return "null"
 		}
 	}
 
-	private static func makeOffsets(_ s: inout String) {
-		var lb = 0
-		var comp = s.components(separatedBy: "\n")
-		for i in 0 ..< comp.count {
-			let l = comp[i].components(separatedBy: "{").count - comp[i].components(separatedBy: "}").count
-			if l < 0 { lb += l }
-			comp[i] = [String](repeating: "   ", count: lb).joined() + comp[i]
-			if l > 0 { lb += l }
-		}
-		s = comp.joined(separator: "\n")
-	}
+	private static let singleIndent = "   "
 }
 
 extension JSON: ExpressibleByArrayLiteral {
@@ -476,8 +489,8 @@ extension JSON: ExpressibleByDictionaryLiteral {
 
 extension JSON: ExpressibleByFloatLiteral {
 
-	public typealias FloatLiteralType = Double
-	public init(floatLiteral value: Double) { self = .number(Decimal(value)) }
+	public typealias FloatLiteralType = Decimal.FloatLiteralType
+	public init(floatLiteral value: FloatLiteralType) { self = .number(Decimal(floatLiteral: value)) }
 }
 
 extension JSON: ExpressibleByIntegerLiteral {
@@ -601,21 +614,27 @@ extension JSON: Hashable {
 extension JSON: Comparable {
 
 	public static func > (lhs: JSON, rhs: JSON) -> Bool {
-
-		switch (lhs.type, rhs.type) {
-		case (.number, .number): return lhs.rawNumber > rhs.rawNumber
-		case (.string, .string): return lhs.rawString > rhs.rawString
+		switch (lhs, rhs) {
+		case let (.number(l), .number(r)): return l > r
+		case let (.string(l), .string(r)): return l > r
+		case let (.array(l), .array(r)): return l.count > r.count
+		case let (.object(l), .array(r)): return l.count > r.count
+		case let (.object(l), .object(r)): return l.count > r.count
+		case let (.array(l), .object(r)): return l.count > r.count
 		default: return false
 		}
 	}
 
 	public static func < (lhs: JSON, rhs: JSON) -> Bool {
+		rhs > lhs
+	}
 
-		switch (lhs.type, rhs.type) {
-		case (.number, .number): return lhs.rawNumber < rhs.rawNumber
-		case (.string, .string): return lhs.rawString < rhs.rawString
-		default: return false
-		}
+	public static func <= (lhs: JSON, rhs: JSON) -> Bool {
+		lhs < rhs || lhs == rhs
+	}
+
+	public static func >= (lhs: JSON, rhs: JSON) -> Bool {
+		lhs > rhs || lhs == rhs
 	}
 }
 
@@ -652,7 +671,11 @@ public extension JSON {
 			switch (self, other) {
 			case (var .object(object), let .object(other)):
 				for (key, value) in other {
-					try object[key].orNull.merge(with: value, typecheck: false)
+					if object[key] == nil {
+						object[key] = value
+					} else {
+						try object[key]?.merge(with: value, typecheck: false)
+					}
 				}
 				self = .object(object)
 			case let (.array(array), .array(other)):

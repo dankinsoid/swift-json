@@ -3,13 +3,12 @@ import XCTest
 
 class PerformanceTests: XCTestCase {
 
-	var testData: Data!
+	var testData = Data()
 
 	override func setUp() {
 		super.setUp()
-
-		if let file = Bundle(for: PerformanceTests.self).path(forResource: "Tests", ofType: "json") {
-			testData = try? Data(contentsOf: URL(fileURLWithPath: file))
+		if let file = Bundle.module.url(forResource: "Tests", withExtension: "json") {
+			testData = (try? Data(contentsOf: file)) ?? Data()
 		} else {
 			XCTFail("Can't find the test JSON file")
 		}
@@ -39,7 +38,7 @@ class PerformanceTests: XCTestCase {
 		}
 		measure {
 			for _ in 1 ... 100 {
-				let object: Any? = json.object
+				let object: Any? = json.array
 				XCTAssertTrue(object != nil)
 			}
 		}

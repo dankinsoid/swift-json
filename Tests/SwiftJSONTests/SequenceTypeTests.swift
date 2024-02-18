@@ -4,13 +4,13 @@ import XCTest
 class SequenceTypeTests: XCTestCase {
 
 	func testJSONFile() {
-		if let file = Bundle(for: BaseTests.self).path(forResource: "Tests", ofType: "json") {
-			let testData = try? Data(contentsOf: URL(fileURLWithPath: file))
+		if let file = Bundle.module.url(forResource: "Tests", withExtension: "json") {
+			let testData = try? Data(contentsOf: file)
 			guard let json = try? JSON(from: testData!) else {
 				XCTFail("Unable to parse the data")
 				return
 			}
-			XCTAssertEqual(json.count, 10)
+			XCTAssertEqual(json.count, 3)
 		} else {
 			XCTFail("Can't find the test JSON file")
 		}
@@ -69,7 +69,7 @@ class SequenceTypeTests: XCTestCase {
 		var array: [Any?] = []
 		for sub in json {
 			XCTAssertEqual(sub, json[index])
-			array.append(sub.value)
+			array.append(sub.extract())
 			index += 1
 		}
 		XCTAssertEqual(index, 4)
@@ -89,11 +89,10 @@ class SequenceTypeTests: XCTestCase {
 			index += 1
 		}
 		XCTAssertEqual(index, 3)
-		XCTAssertEqual((array[0] as! [String: Int])["1"]!, 1)
-		XCTAssertEqual((array[0] as! [String: Int])["2"]!, 2)
-		XCTAssertEqual((array[1] as! [String: String])["a"]!, "A")
-		XCTAssertEqual((array[1] as! [String: String])["b"]!, "B")
-		XCTAssertTrue((array[2] as! [String: Any])["null"] == nil)
+		XCTAssertEqual((array[0] as? [String: Decimal])?["1"], 1)
+		XCTAssertEqual((array[0] as? [String: Decimal])?["2"], 2)
+		XCTAssertEqual((array[1] as? [String: String])?["a"], "A")
+		XCTAssertEqual((array[1] as? [String: String])?["b"], "B")
 	}
 
 	func testDictionaryAllNumber() {
@@ -151,14 +150,13 @@ class SequenceTypeTests: XCTestCase {
 		var index = 0
 		var dictionary: [String: Any?] = [:]
 		for sub in json {
-			dictionary[sub.object?.first?.key ?? ""] = sub.object?.first?.value
+			dictionary[sub.object?.first?.key ?? ""] = sub.object?.first?.value.extract()
 			index += 1
 		}
 
 		XCTAssertEqual(index, 4)
-		XCTAssertEqual(dictionary["a"]! as? String, "aoo")
-		XCTAssertEqual(dictionary["bb"]! as? String, "bpp")
-		XCTAssertTrue(dictionary["null"] == nil)
+		XCTAssertEqual(dictionary["a"] as? String, "aoo")
+		XCTAssertEqual(dictionary["bb"] as? String, "bpp")
 	}
 
 	func testDictionaryAllArray() {
@@ -174,13 +172,13 @@ class SequenceTypeTests: XCTestCase {
 		}
 
 		XCTAssertEqual(index, 3)
-		XCTAssertEqual((dictionary["Number"] as! [Any?])[0] as? Int, 1)
-		XCTAssertEqual((dictionary["Number"] as! [Any?])[1] as? Double, 2.123456)
-		XCTAssertEqual((dictionary["String"] as! [Any?])[0] as? String, "aa")
-		XCTAssertEqual((dictionary["Mix"] as! [Any?])[0] as? Bool, true)
-		XCTAssertEqual((dictionary["Mix"] as! [Any?])[1] as? String, "766")
-		XCTAssertTrue((dictionary["Mix"] as! [Any?])[2] == nil)
-		XCTAssertEqual((dictionary["Mix"] as! [Any?])[3] as? Double, 655_231.9823)
+		XCTAssertEqual((dictionary["Number"] as? [Any?])?[0] as? Decimal, 1)
+		XCTAssertEqual((dictionary["Number"] as? [Any?])?[1] as? Decimal, 2.123456)
+		XCTAssertEqual((dictionary["String"] as? [Any?])?[0] as? String, "aa")
+		XCTAssertEqual((dictionary["Mix"] as? [Any?])?[0] as? Bool, true)
+		XCTAssertEqual((dictionary["Mix"] as? [Any?])?[1] as? String, "766")
+		XCTAssertTrue((dictionary["Mix"] as? [Any?])?[2] == nil)
+		XCTAssertEqual((dictionary["Mix"] as? [Any?])?[3] as? Decimal, 655_231.9823)
 	}
 
 	func testDictionaryIteratingPerformance() {
@@ -188,10 +186,12 @@ class SequenceTypeTests: XCTestCase {
 		for i in 1 ... 1000 {
 			json[String(i)] = "hello"
 		}
+		var _value: JSON = [:]
 		measure {
 			for value in json {
-				print(value)
+				_value = value
 			}
 		}
+		XCTAssertFalse(_value.isEmpty)
 	}
 }

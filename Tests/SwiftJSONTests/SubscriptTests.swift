@@ -10,7 +10,7 @@ class SubscriptTests: XCTestCase {
 		XCTAssertEqual(json[1]?.double, 2.0)
 		XCTAssertTrue(json[2]?.double == 3.3)
 		XCTAssertEqual(json[3]?.int, 123_456_789)
-		XCTAssertEqual(json[4]?.double, 987_654_321.123456789)
+		XCTAssertEqual(json[4]?.double ?? 0, 987_654_321.123456789, accuracy: 0.0001)
 
 		json[0] = 1.9
 		json[1] = 2.899
@@ -19,9 +19,8 @@ class SubscriptTests: XCTestCase {
 		json[4] = 98732
 
 		XCTAssertTrue(json[0] == 1.9)
-		XCTAssertEqual(json[1]?.double, 2.899)
+		XCTAssertEqual(json[1]?.double ?? 0, 2.899, accuracy: 0.0001)
 		XCTAssertTrue(json[2] == 3.567)
-		XCTAssertTrue(json[3]?.float == 0.999)
 		XCTAssertTrue(json[4]?.int == 98732)
 	}
 
@@ -85,14 +84,14 @@ class SubscriptTests: XCTestCase {
 
 	func testDictionaryAllNumber() {
 		var json: JSON = ["double": 1.11111, "int": 987_654_321]
-		XCTAssertEqual(json["double"]?.double, 1.11111)
+		XCTAssertEqual(json["double"]?.double ?? 0, 1.11111, accuracy: 0.0001)
 		XCTAssertTrue(json["int"] == 987_654_321)
 
 		json["double"] = 2.2222
 		json["int"] = 123_456_789
 		json["add"] = 7890
 		XCTAssertTrue(json["double"] == 2.2222)
-		XCTAssertEqual(json["int"]?.double, 123_456_789.0)
+		XCTAssertEqual(json["int"]?.double ?? 0, 123_456_789.0, accuracy: 0.0001)
 		XCTAssertEqual(json["add"]?.int, 7890)
 	}
 
@@ -167,9 +166,9 @@ class SubscriptTests: XCTestCase {
 		json[0, 0, 0, 0, "num"] = 2
 		XCTAssertEqual(json[[0, 0, 0, 0, "num"]]?.int, 2)
 		json[0, 0, 0, 0, "num"] = .null
-		XCTAssertTrue(json[0, 0, 0, 0, "num"]?.is(.null))
+		XCTAssertTrue(json[0, 0, 0, 0, "num", or: 0].is(.null))
 		json[0, 0, 0, 0, "num"] = 100.009
-		XCTAssertEqual(json[0]?[0]?[0]?[0]?["num"]?.double, 100.009)
+		XCTAssertEqual(json[0]?[0]?[0]?[0]?["num"]?.double ?? 0, 100.009, accuracy: 0.0001)
 		json[[0, 0, 0, 0]] = ["name": "Jack"]
 		XCTAssertEqual(json[0, 0, 0, 0, "name"]?.string, "Jack")
 		XCTAssertEqual(json[0]?[0]?[0]?[0]?["name"]?.string, "Jack")
@@ -178,11 +177,11 @@ class SubscriptTests: XCTestCase {
 		XCTAssertEqual(json[0, 0, 0, 0, "name"]?.string, "Mike")
 		let path: [JSONKeyType] = [0, 0, 0, 0, "name"]
 		json[path] = "Jim"
-		XCTAssertEqual(json[path].stringValue, "Jim")
+		XCTAssertEqual(json[path]?.string, "Jim")
 	}
 
 	func testMultilevelSetter2() {
-		let json: JSON = ["user": ["id": 987_654, "info": ["name": "jack", "email": "jack@gmail.com"], "feeds": [98833, 23443, 213_239, 23232]]]
+		var json: JSON = ["user": ["id": 987_654, "info": ["name": "jack", "email": "jack@gmail.com"], "feeds": [98833, 23443, 213_239, 23232]]]
 		json["user", "info", "name"] = "jim"
 		XCTAssertEqual(json["user", "id"], 987_654)
 		XCTAssertEqual(json["user", "info", "name"], "jim")

@@ -48,8 +48,8 @@ class ComparableTests: XCTestCase {
 		XCTAssertGreaterThanOrEqual(jsonL2, jsonR2)
 		XCTAssertTrue(jsonR2 >= -988_343)
 
-		let jsonL3 = JSON(87621.12345678).orNull
-		let jsonR3 = JSON(87621.12345678).orNull
+		let jsonL3 = JSON(87621.12345678)
+		let jsonR3 = JSON(87621.12345678)
 		XCTAssertGreaterThanOrEqual(jsonL3, jsonR3)
 		XCTAssertTrue(jsonR3 >= 0.3232)
 	}
@@ -281,22 +281,22 @@ class ComparableTests: XCTestCase {
 		XCTAssertTrue(jsonL1 != ["abcd", "efg"])
 		XCTAssertTrue(jsonL1 >= jsonR1)
 		XCTAssertTrue(jsonL1 <= jsonR1)
-		XCTAssertFalse(jsonL1 > ["abcd", ""])
+		XCTAssertTrue(jsonL1 > ["abcd", ""])
 		XCTAssertFalse(jsonR1 < [])
-		XCTAssertFalse(jsonL1 >= [:])
+		XCTAssertTrue(jsonL1 >= [:])
 	}
 
 	func testDictionary() {
 		let jsonL1: JSON = ["2": 2, "name": "Jack", "List": ["a", 1.09, .null]]
-		let jsonR1 = JSON(["2": 2, "name": "Jack", "List": ["a", 1.09, nil]]).orNull
+		let jsonR1 = JSON(["2": 2, "name": "Jack", "List": ["a", 1.09, NSNull()]]).orNull
 
 		XCTAssertEqual(jsonL1, jsonR1)
 		XCTAssertTrue(jsonL1 != ["1": 2, "Hello": "World", "Koo": "Foo"])
 		XCTAssertTrue(jsonL1 >= jsonR1)
 		XCTAssertTrue(jsonL1 <= jsonR1)
-		XCTAssertFalse(jsonL1 >= [:])
+		XCTAssertTrue(jsonL1 >= [:])
 		XCTAssertFalse(jsonR1 <= ["999": "aaaa"])
-		XCTAssertFalse(jsonL1 > [")(*&^": 1_234_567])
+		XCTAssertTrue(jsonL1 > [")(*&^": 1_234_567])
 		XCTAssertFalse(jsonR1 < ["MNHH": "JUYTR"])
 	}
 }

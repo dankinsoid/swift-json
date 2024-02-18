@@ -260,7 +260,7 @@ private func decodeString(_ s: String) -> String? {
 			if let escaped = chars.next() {
 				switch escaped.value {
 				case UInt32(asciiLowerU): // "\u"
-					// Exactly 4 hex digits:
+					/// Exactly 4 hex digits:
 					if let digit1 = chars.next(),
 					   let d1 = fromHexDigit(digit1),
 					   let digit2 = chars.next(),
@@ -437,33 +437,33 @@ struct JSONScanner {
 		return Character(UnicodeScalar(UInt32(currentByte))!)
 	}
 
-	// Parse the leading UInt64 from the provided utf8 bytes.
-	//
-	// This is called in three different situations:
-	//
-	// * Unquoted number.
-	//
-	// * Simple quoted number.  If a number is quoted but has no
-	//   backslashes, the caller can use this directly on the UTF8 by
-	//   just verifying the quote marks.  This code returns `nil` if it
-	//   sees a backslash, in which case the caller will need to handle ...
-	//
-	// * Complex quoted number.  In this case, the caller must parse the
-	//   quoted value as a string, then convert the string to utf8 and
-	//   use this to parse the result.  This is slow but fortunately
-	//   rare.
-	//
-	// In the common case where the number is written in integer form,
-	// this code does a simple straight conversion.  If the number is in
-	// floating-point format, this uses a slower and less accurate
+	/// Parse the leading UInt64 from the provided utf8 bytes.
+	///
+	/// This is called in three different situations:
+	///
+	/// * Unquoted number.
+	///
+	/// * Simple quoted number.  If a number is quoted but has no
+	///   backslashes, the caller can use this directly on the UTF8 by
+	///   just verifying the quote marks.  This code returns `nil` if it
+	///   sees a backslash, in which case the caller will need to handle ...
+	///
+	/// * Complex quoted number.  In this case, the caller must parse the
+	///   quoted value as a string, then convert the string to utf8 and
+	///   use this to parse the result.  This is slow but fortunately
+	///   rare.
+	///
+	/// In the common case where the number is written in integer form,
+	/// this code does a simple straight conversion.  If the number is in
+	/// floating-point format, this uses a slower and less accurate
 	// approach: it identifies a substring comprising a float, and then
-	// uses Double() and UInt64() to convert that string to an unsigned
-	// integer.  In particular, it cannot preserve full 64-bit integer
-	// values when they are written in floating-point format.
-	//
-	// If it encounters a "\" backslash character, it returns a nil.  This
-	// is used by callers that are parsing quoted numbers.  See nextSInt()
-	// and nextUInt() below.
+	/// uses Double() and UInt64() to convert that string to an unsigned
+	/// integer.  In particular, it cannot preserve full 64-bit integer
+	/// values when they are written in floating-point format.
+	///
+	/// If it encounters a "\" backslash character, it returns a nil.  This
+	/// is used by callers that are parsing quoted numbers.  See nextSInt()
+	/// and nextUInt() below.
 	private func parseBareUnsignedInteger<U: FixedWidthInteger & UnsignedInteger>(
 		source: UnsafeBufferPointer<UInt8>,
 		index: inout UnsafeBufferPointer<UInt8>.Index,
@@ -484,7 +484,7 @@ struct JSONScanner {
 					// leading '0' forbidden unless it is the only digit
 					throw JSONDecodingError.leadingZero
 				case asciiPeriod, asciiLowerE, asciiUpperE: // . e
-					// Slow path: JSON numbers can be written in floating-point notation
+					/// Slow path: JSON numbers can be written in floating-point notation
 					index = start
 					if let d = try parseBareDouble(source: source,
 					                               index: &index,
@@ -515,7 +515,7 @@ struct JSONScanner {
 					source.formIndex(after: &index)
 					n = n * 10 + val
 				case asciiPeriod, asciiLowerE, asciiUpperE: // . e
-					// Slow path: JSON allows floating-point notation for integers
+					/// Slow path: JSON allows floating-point notation for integers
 					index = start
 					if let d = try parseBareDouble(source: source,
 					                               index: &index,
@@ -623,7 +623,7 @@ struct JSONScanner {
 		try parseBareNumber(source: source, index: &index, end: end, parse: numberFormatter.utf8ToDecimal)
 	}
 
-	private func parseBareNumber<T: ExpressibleByFloatLiteral>(
+	private func parseBareNumber<T: Numeric>(
 		source: UnsafeBufferPointer<UInt8>,
 		index: inout UnsafeBufferPointer<UInt8>.Index,
 		end: UnsafeBufferPointer<UInt8>.Index,
@@ -667,7 +667,7 @@ struct JSONScanner {
 			// First digit can be zero only if not followed by a digit
 			source.formIndex(after: &index)
 			if index == end {
-				return 0.0
+				return .zero
 			}
 			c = source[index]
 			if c == asciiBackslash {
@@ -1088,7 +1088,7 @@ struct JSONScanner {
 		throw JSONDecodingError.malformedNumber
 	}
 
-	mutating func nextDecimal() throws -> Decimal {
+	mutating func nextNumber() throws -> Decimal {
 		skipWhitespace()
 		guard hasMoreContent else {
 			throw JSONDecodingError.truncated
@@ -1117,11 +1117,9 @@ struct JSONScanner {
 				index = start
 				let s = try nextQuotedString()
 				switch s {
-				case "NaN": return Decimal.nan
-				case "Inf": return Decimal.nan
-				case "-Inf": return -Decimal.nan
-				case "Infinity": return Decimal.nan
-				case "-Infinity": return -Decimal.nan
+				case "NaN": return .nan
+				// case "Inf", "Infinity": return .double(.infinity)
+				// case "-Inf", "-Infinity": return .double(-Double.infinity)
 				default:
 					let raw = s.data(using: String.Encoding.utf8)!
 					let n = try raw.withUnsafeBytes { rawPointer -> Decimal? in
@@ -1522,14 +1520,14 @@ struct JSONScanner {
 	/// Advance the index past the next complete quoted string.
 	///
 	// Caveat:  This does not fully validate; it will accept
-	// strings that have malformed \ escapes.
-	//
-	// It would be nice to do better, but I don't think it's critical,
-	// since there are many reasons that strings (and other tokens for
-	// that matter) may be skippable but not parseable.  For example:
-	// Old clients that don't know new field types will skip fields
-	// they don't know; newer clients may reject the same input due to
-	// schema mismatches or other issues.
+	/// strings that have malformed \ escapes.
+	///
+	/// It would be nice to do better, but I don't think it's critical,
+	/// since there are many reasons that strings (and other tokens for
+	/// that matter) may be skippable but not parseable.  For example:
+	/// Old clients that don't know new field types will skip fields
+	/// they don't know; newer clients may reject the same input due to
+	/// schema mismatches or other issues.
 	private mutating func skipString() throws {
 		if currentByte != asciiDoubleQuote {
 			throw JSONDecodingError.malformedString

@@ -15,12 +15,17 @@ let package = Package(
 		.library(name: "SwiftJSON", targets: ["SwiftJSON"]),
 	],
 	dependencies: [
+		.package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.0.0"),
 	],
 	targets: [
 		.target(
 			name: "SwiftJSON",
 			dependencies: []
 		),
-		.testTarget(name: "SwiftJSONTests", dependencies: ["SwiftJSON"]),
+		.testTarget(
+			name: "SwiftJSONTests",
+			dependencies: ["SwiftJSON", .product(name: "CustomDump", package: "swift-custom-dump")],
+			resources: [.copy("Resources/Tests.json")]
+		),
 	]
 )

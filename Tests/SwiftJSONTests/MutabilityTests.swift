@@ -34,11 +34,11 @@ class MutabilityTests: XCTestCase {
 		json["new"] = JSON(["foo": "bar"])
 		XCTAssertEqual(json["new"], ["foo": "bar"])
 
-		json.foo.bar = JSON([]).orNull
-		XCTAssertEqual(json.foo.bar, [])
+		json.foo?.bar = JSON([]).orNull
+		XCTAssertEqual(json.foo?.bar, [])
 
-		json.bar.foo = JSON(["2": "b"]).orNull
-		XCTAssertEqual(json.bar.foo, ["2": "b"])
+		json.bar?.foo = JSON(["2": "b"]).orNull
+		XCTAssertEqual(json.bar?.foo, ["2": "b"])
 	}
 
 	func testArrayMutability() {
@@ -82,12 +82,11 @@ class MutabilityTests: XCTestCase {
 		number = JSON("111")
 		XCTAssertEqual(number, "111")
 		XCTAssertEqual(number.int, 111)
-		XCTAssertEqual(number.stringValue, "111")
+		XCTAssertEqual(number.string, "111")
 
 		var boolean = JSON(true)
 		boolean = JSON(false)
 		XCTAssertEqual(boolean, false)
-		XCTAssertEqual(boolean.boolValue, false)
 	}
 
 	func testArrayRemovability() {

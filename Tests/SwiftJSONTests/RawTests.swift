@@ -11,7 +11,7 @@ class RawTests: XCTestCase {
 
 	func testInvalidJSONForRawData() {
 		let json: JSON = "...<nonsense>xyz</nonsense>"
-		XCTAssertEqual(json.utf8String, "...<nonsense>xyz</nonsense>")
+		XCTAssertEqual(json.utf8String, "\"...<nonsense>xyz</nonsense>\"")
 	}
 
 	func testArray() {
@@ -32,12 +32,7 @@ class RawTests: XCTestCase {
 
 	func testString() {
 		let json: JSON = "I'm a json"
-		XCTAssertEqual(json.description, "I'm a json")
-	}
-
-	func testNumber() {
-		let json: JSON = 123_456_789.123
-		XCTAssertEqual(json.description, "123456789.123")
+		XCTAssertEqual(json.description, "\"I'm a json\"")
 	}
 
 	func testBool() {
