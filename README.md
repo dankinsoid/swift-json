@@ -23,7 +23,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-json.git", from: "0.0.1")
+    .package(url: "https://github.com/dankinsoid/swift-json.git", from: "0.1.0")
   ],
   targets: [
     .target(
